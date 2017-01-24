@@ -7,7 +7,7 @@ This package contains everything to setup a complete Elvis <-> EasyCatalog integ
 The integration requires:
 
 * Fully installed and licensed Elvis server. You can obtain Elvis via: https://www.woodwing.com/en/digital-asset-management-system
-* InDesign with EasyCatalog. EasyCatalog be downloaded at: https://www.65bit.com
+* InDesign with EasyCatalog. EasyCatalog be downloaded at: https://www.65bit.com/download/
 
 ## Elvis setup
 
