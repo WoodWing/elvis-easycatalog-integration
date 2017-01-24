@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<plugin>
+	<info>
+		<version>
+			<pluginVersion>1.1</pluginVersion>
+			<requiresAtLeast>5.15.2.9</requiresAtLeast>
+		</version>
+		<description>Import Excel sheet</description>
+	</info>
+	<action>
+		<url>${pluginUrl}/index.html</url>
+		<icon16Url>${pluginUrl}/icon16.png</icon16Url>
+		<icon24Url>${pluginUrl}/icon24.png</icon24Url>
+
+		<userInterface>
+			<tab/>
+		</userInterface>
+
+		<menuAssignments>
+			<menuAssignment id="toolBar" order="1"/>
+		</menuAssignments>
+
+		<messages>
+			<entries locale="en_US">
+				<entry key="title">Excel import</entry>
+				<entry key="button.label">Excel import</entry>
+				<entry key="button.tooltip">Import metadata from Excel sheet</entry>
+			</entries>
+		</messages>
+	</action>
+</plugin>

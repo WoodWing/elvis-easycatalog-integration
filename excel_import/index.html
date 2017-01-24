@@ -1,0 +1,209 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<!--
+
+Licensed under the MIT License
+Copyright (c) 2010-2016 WoodWing Software
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this а and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
+
+-->
+<head>
+	<title>Excel import</title>
+	<!--<script src="${pluginsBaseRootUrl}/web.shared/jquery.js" type="text/javascript"></script>-->
+	<script src="resources/jquery-3.1.1.min.js" type="text/javascript"></script>
+	<script src="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></script>
+	<script src="${pluginsBaseRootUrl}/web.shared/jquery.class.js" type="text/javascript"></script>
+	<script src="${pluginsBaseRootUrl}/web.shared/jquery.cookie.js" type="text/javascript"></script>
+	<script src="${pluginsBaseRootUrl}/web.shared/elvis_api/js/jquery.elvis.js" type="text/javascript"></script>
+	<script src="resources/xlsx.core.min.js" type="text/javascript"></script>
+
+	<link rel="stylesheet" href="//code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css">
+
+	<script type="text/javascript">
+	/*
+		Idea (not finished yet)
+		1. Upload file Excel file
+		2. Choose identifier column to match on (for ex. product id)
+		3. Create mapping between Elvis metadata fields and columns in the file
+		4. Update metadata (show progress / allow to cancel)
+		5. Indicate what matched / didn't match / proper error handling
+	*/
+
+	// Initialize and setup components
+	var elvisContext = ElvisPlugin.resolveElvisContext();
+	var elvisApi = new ElvisAPI("${serverUrl}");
+
+	function loadCssFromParent() {
+		var parentLinks = $("link[rel=stylesheet]", parent.document);
+		for (var i = 0; i < parentLinks.length; i++) {
+			loadCss(parentLinks[i].href);
+		}
+	}
+
+	function loadCss(href) {
+		var head = $("head")[0];
+		var link = document.createElement("link");
+		link.rel = "stylesheet";
+		link.href = href;
+		head.appendChild(link);
+	}
+
+	// Load CSS files from Elvis
+	loadCssFromParent();
+
+	// Load own CSS
+	loadCss("resources/styles.css");
+
+	// Static mapping
+	var fieldMapping = {
+		"Car Full Name" : "cf_carFullName",
+		"Car Brand" : "cf_carBrand",
+		"Car Type" : "cf_carType",
+		"Car Body" : "cf_carBody",
+		"Car Engine" : "cf_carEngine",
+		"Car Transmission" : "cf_carTransmission",
+		"Car Price" : "cf_carPrice",
+	}
+
+	// Static match mapping
+	var matchMapping = {
+		"column" : "Car Id",
+		"elvisField" : "filename",
+		"method" : "startsWith"
+	}
+
+	function importExcel(f) {
+		var reader = new FileReader();
+		var name = f.name;
+
+		reader.onload = function(e) {
+			var data = e.target.result;
+
+			// if binary string, read with type 'binary'
+			var workbook = XLSX.read(data, {type: 'binary'});
+
+			var firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+			var objs = XLSX.utils.sheet_to_json(firstSheet);
+
+			// Switch to next screen
+			$(".start").hide();
+			$(".progress").show();
+
+			updateProgressBar(0);
+			importObjects(objs, 0);
+		};
+		reader.readAsBinaryString(f);
+	}
+
+	function importObjects(objs, idx) {
+		var obj = objs[idx];
+		var newMetadata = {};
+		for (var key in obj){
+			if (fieldMapping.hasOwnProperty(key)) {
+				var elvisField = fieldMapping[key];
+				newMetadata[elvisField] = obj[key];
+			}
+		}
+		var searchValue = obj[matchMapping.column];
+		var query = null;
+		switch(matchMapping.method) {
+			case "startsWith" :
+				query = matchMapping.elvisField + ":" + searchValue + "*";
+				break;
+			case "matches" :
+			default :
+				query = matchMapping.elvisField + ':"' + searchValue + '"';
+				break;
+		}
+		elvisApi.updatebulk(query, newMetadata, function(data) {
+			idx++;
+			percentageDone = (100 / objs.length) * idx;
+			updateProgressBar(percentageDone);
+			console.log("Update " + idx + " of " + objs.length + " done (" + percentageDone + ")");
+			$(".update-counter").text("Update " + idx + " of " + objs.length + " done: " + Math.round(percentageDone) + "%")
+			if (idx < objs.length) {
+				importObjects(objs, idx);
+			}
+			else {
+				console.log("Done");
+				//$(".progress").hide();
+				$(".finished").show();
+				$(".finished").text("Successfully updated " + idx + " assets.")
+			}
+		});
+	}
+
+	function updateProgressBar(percentage) {
+		$(".progress-bar").progressbar({
+      		value: percentage
+		});
+	}
+
+	function registerDragDropEventhandlers() {
+		var obj = $(".drop-area");
+		obj.on('dragenter', function (e) {
+			e.stopPropagation();
+			e.preventDefault();
+			$(this).addClass('hover');
+		});
+		obj.on('dragleave', function (e) {
+			e.stopPropagation();
+			e.preventDefault();
+			$(this).removeClass('hover');
+		});
+		obj.on('dragover', function (e) {
+			 e.stopPropagation();
+			 e.preventDefault();
+		});
+		obj.on('drop', function (e) {
+			e.stopPropagation();
+			e.preventDefault();
+
+			var files = e.originalEvent.dataTransfer.files;
+			if (files.length == 0) {
+				return;
+			}
+			var f = files[0];
+
+			importExcel(f);
+		});
+	}
+
+	$(document).ready(function() {
+		registerDragDropEventhandlers();
+	});
+	</script>
+</head>
+
+<body>
+	<div class="main-container">
+		<h1>Import metadata from Excel</h1>
+		<div class="start">
+			<div class="drop-area">Drop your Excel (xlsx / xls) here!</div>
+		</div>
+		<div class="progress">
+			<div class="update-counter"></div>
+			<div class="progress-bar"></div>
+		</div>
+		<div class="finished"></div>
+	</div>
+</body>
+
+</html>
