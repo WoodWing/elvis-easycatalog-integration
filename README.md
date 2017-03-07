@@ -16,6 +16,7 @@ These setup instructions assume a single node Elvis environment, for a multi-nod
 * Install Elvis, I used 5.18 but older versions should also work. If Elvis is already started, stop it.
 * Place all configuration files supplied in `elvis-config` in your Elvis config folder. Note: If you already have Elvis installed, you might need to merge them with your existing config files.
 * Start the Elvis server.
+* Since we've added custom metadata fields, it's required to [update the Elvis asset index](https://helpcenter.woodwing.com/hc/en-us/articles/205655015-Updating-the-index-in-Elvis-5).
 * Please note that the `excel_import` plugin is a concept created to demonstrate how you can match an Excel file with assets in Elvis. The plugin works but the mapping between metadata fields in Elvis and columns in Excel is hard coded.
 
 ## Elvis configuration
